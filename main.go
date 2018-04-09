@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -14,9 +15,6 @@ import (
 
 	"github.com/thoj/go-ircevent"
 )
-
-const channel = "#pallkars"
-const serverssl = "irc.boxbox.org:6697"
 
 type azInstance struct {
 	answer      int
@@ -48,10 +46,20 @@ func extractAZGuess(message string) bool {
 }
 
 func main() {
+	server := flag.String("s", "", "irc server to connect to")
+	channel := flag.String("c", "", "irc channel to connect to")
+	wordlist := flag.String("w", "", "wordlist file to use")
+
+	flag.Parse()
+
+	log.Printf("using server %s", *server)
+	log.Printf("using channel %s", *channel)
+	log.Printf("using wordlist %s", *wordlist)
+
 	rand.Seed(time.Now().UTC().UnixNano())
 	var az *azInstance
 
-	file, err := os.Open("/home/tobbe/wordlist/International/3of6game.txt")
+	file, err := os.Open(*wordlist)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,15 +86,15 @@ func main() {
 	irccon.Debug = true
 	irccon.UseTLS = true
 	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
-	irccon.AddCallback("001", func(e *irc.Event) { irccon.Join(channel) })
+	irccon.AddCallback("001", func(e *irc.Event) { irccon.Join(*channel) })
 	irccon.AddCallback("366", func(e *irc.Event) {})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
 		if e.Message() == "!az" {
 			if az != nil {
-				irccon.Privmsgf(channel, "game already in progress. keep guessing... %s - %s", words[az.currentLow], words[az.currentHigh])
+				irccon.Privmsgf(*channel, "game already in progress. keep guessing... %s - %s", words[az.currentLow], words[az.currentHigh])
 			} else {
 				az = newAZ(words)
-				irccon.Privmsgf(channel, "starting a new AZ game. Start guessing the word... %s - %s", words[az.currentLow], words[az.currentHigh])
+				irccon.Privmsgf(*channel, "starting a new AZ game. Start guessing the word... %s - %s", words[az.currentLow], words[az.currentHigh])
 			}
 		} else if az != nil {
 			guess := e.Message()
@@ -109,22 +117,22 @@ func main() {
 						//this is a valid guess that exists
 						if foundIndex < az.answer {
 							az.currentLow = foundIndex
-							irccon.Privmsgf(channel, "%s is not right, but closer! %s - %s", words[foundIndex], words[az.currentLow], words[az.currentHigh])
+							irccon.Privmsgf(*channel, "%s is not right, but closer! %s - %s", words[foundIndex], words[az.currentLow], words[az.currentHigh])
 						} else if foundIndex > az.answer {
 							az.currentHigh = foundIndex
-							irccon.Privmsgf(channel, "%s is not right, but closer! %s - %s", words[foundIndex], words[az.currentLow], words[az.currentHigh])
+							irccon.Privmsgf(*channel, "%s is not right, but closer! %s - %s", words[foundIndex], words[az.currentLow], words[az.currentHigh])
 						} else {
-							irccon.Privmsgf(channel, "WOW you won, that was the right word %s!", words[foundIndex])
+							irccon.Privmsgf(*channel, "WOW you won, that was the right word %s!", words[foundIndex])
 							az = nil
 						}
 					} else {
-						irccon.Privmsgf(channel, "%s is not a valid word. try again", guess)
+						irccon.Privmsgf(*channel, "%s is not a valid word. try again", guess)
 					}
 				}
 			}
 		}
 	})
-	err = irccon.Connect(serverssl)
+	err = irccon.Connect(*server)
 	if err != nil {
 		fmt.Printf("Err %s", err)
 		return
