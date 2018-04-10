@@ -107,8 +107,8 @@ func main() {
 					//this is a valid guess range wise. just gotta see that it exists in the word list
 					log.Printf("guess %s is within range", guess)
 					foundIndex := sort.Search(len(words), func(i int) bool {
-						log.Printf("index in search %d, guess: %s, current: %s result of (%s <= %s): %t", i, guess, words[i], guess, words[i], guess >= words[i])
-						return guess <= words[i]
+						log.Printf("index in search %d, guess: %s, current: %s result of (%s >= %s): %t", i, guess, words[i], guess, words[i], guess >= words[i])
+						return guess >= words[i]
 					})
 
 					log.Printf("found index %d and len is %d", foundIndex, len(words))
