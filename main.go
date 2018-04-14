@@ -96,6 +96,13 @@ func main() {
 				az = newAZ(words)
 				irccon.Privmsgf(*channel, "starting a new AZ game. Start guessing the word... %s - %s", words[az.currentLow], words[az.currentHigh])
 			}
+		} else if e.Message() == "!az stop" {
+			if az != nil {
+				irccon.Privmsgf(*channel, "So sad that you couldn't solve it yourself. The word was %s", words[az.answer])
+			} else {
+				az = newAZ(words)
+				irccon.Privmsgf(*channel, "There's no AZ game in progress ya dummy")
+			}
 		} else if az != nil {
 			guess := e.Message()
 			guessValid := extractAZGuess(guess)
