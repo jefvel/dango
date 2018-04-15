@@ -99,6 +99,7 @@ func main() {
 		} else if e.Message() == "!az stop" {
 			if az != nil {
 				irccon.Privmsgf(*channel, "So sad that you couldn't solve it yourself. The word was %s", words[az.answer])
+				az = nil
 			} else {
 				az = newAZ(words)
 				irccon.Privmsgf(*channel, "There's no AZ game in progress ya dummy")
