@@ -89,7 +89,9 @@ func main() {
 	irccon.AddCallback("001", func(e *irc.Event) { irccon.Join(*channel) })
 	irccon.AddCallback("366", func(e *irc.Event) {})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
-		if e.Message() == "!az" {
+		if e.Message() == "WOW" {
+			irccon.Privmsgf(*channel, "WOW")
+		} else if e.Message() == "!az" {
 			if az != nil {
 				irccon.Privmsgf(*channel, "game already in progress. keep guessing... %s - %s", words[az.currentLow], words[az.currentHigh])
 			} else {
