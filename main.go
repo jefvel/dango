@@ -20,6 +20,8 @@ type azInstance struct {
 	answer      int
 	currentLow  int
 	currentHigh int
+    correctGuesses map[string]int
+    incorrectGuesses map[string]int
 }
 
 func newAZ(words []string) (az *azInstance) {
@@ -32,6 +34,8 @@ func newAZ(words []string) (az *azInstance) {
 	}
 	az.currentLow = 0
 	az.currentHigh = len(words) - 1
+    az.correctGuesses = make(map[string]int)
+    az.incorrectGuesses = make(map[string]int)
 	return
 }
 
@@ -100,7 +104,8 @@ func main() {
 			}
 		} else if e.Message() == "!az stop" {
 			if az != nil {
-				irccon.Privmsgf(*channel, "So sad that you couldn't solve it yourself. The word was %s", words[az.answer])
+                loseString := resultString(az, words[az.answer], e.Nick, false)
+				irccon.Privmsgf(*channel, loseString)
 				az = nil
 			} else {
 				az = newAZ(words)
@@ -111,6 +116,7 @@ func main() {
 			guessValid := extractAZGuess(guess)
 
 			if guessValid {
+                guesser := e.Nick
 				currentLow := words[az.currentLow]
 				currentHigh := words[az.currentHigh]
 				if guess > currentLow && guess < currentHigh {
@@ -125,6 +131,7 @@ func main() {
 
 					if foundIndex != len(words) && words[foundIndex] == guess {
 						//this is a valid guess that exists
+                        az.correctGuesses[guesser]++
 						if foundIndex < az.answer {
 							az.currentLow = foundIndex
 							irccon.Privmsgf(*channel, "%s is not right, but closer! %s - %s", words[foundIndex], words[az.currentLow], words[az.currentHigh])
@@ -132,11 +139,13 @@ func main() {
 							az.currentHigh = foundIndex
 							irccon.Privmsgf(*channel, "%s is not right, but closer! %s - %s", words[foundIndex], words[az.currentLow], words[az.currentHigh])
 						} else {
-							irccon.Privmsgf(*channel, "WOW you won, that was the right word %s!", words[foundIndex])
+                            winString := resultString(az, words[foundIndex], guesser, true)
+                            irccon.Privmsgf(*channel, winString)
 							az = nil
 						}
 					} else {
 						irccon.Privmsgf(*channel, "%s is not a valid word. try again", guess)
+                        az.incorrectGuesses[guesser]++
 					}
 				}
 			}
@@ -149,4 +158,33 @@ func main() {
 	}
 
 	irccon.Loop()
+}
+
+func resultString(az *azInstance, answer string, guesser string, success bool) string {
+    var totalCorrectGuesses int
+    var correctGuessesStr string
+    for nick, value := range az.correctGuesses {
+        correctGuessesStr += fmt.Sprintf("%s (%d), ", nick, value)
+        totalCorrectGuesses += value
+    }
+    if totalCorrectGuesses == 1 {
+        correctGuessesStr = fmt.Sprintf("1 correct guess: %s", correctGuessesStr)
+    } else {
+        correctGuessesStr = fmt.Sprintf("%d correct guesses: %s", totalCorrectGuesses, correctGuessesStr)
+    }
+    var totalIncorrectGuesses int
+    var incorrectGuessesStr string
+    for _, value := range az.incorrectGuesses {
+        totalIncorrectGuesses += value
+    }
+    if totalIncorrectGuesses == 1 {
+        incorrectGuessesStr = fmt.Sprintf("1 incorrect guess")
+    } else {
+        incorrectGuessesStr = fmt.Sprintf("%d incorrect guesses", totalIncorrectGuesses)
+    }
+    if success {
+        return fmt.Sprintf("WOW %s you won, %s was the right word! %s %s", guesser, answer, correctGuessesStr, incorrectGuessesStr)
+    } else {
+        return fmt.Sprintf("So sad that you couldn't solve it yourself. The word was %s. %s %s", answer, correctGuessesStr, incorrectGuessesStr)
+    }
 }
